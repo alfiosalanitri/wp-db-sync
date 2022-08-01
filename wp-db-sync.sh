@@ -1,4 +1,4 @@
-#!bin/bash
+#!/bin/bash
 # A simple bash script to import/export a wordpress database to current wordpress installation directory.
 # written by Alfio Salanitri <www.alfiosalanitri.it> and are licensed under MIT license. 
 
