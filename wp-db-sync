@@ -2,18 +2,18 @@
 # A simple bash script to import/export a wordpress database to current wordpress installation directory.
 # written by Alfio Salanitri <www.alfiosalanitri.it> and are licensed under MIT license. 
 
-dump_name='dump.sql'
-current_directory=$(pwd)
+readonly DUMP_NAME='dump.sql'
+readonly CURRENT_DIRECTORY=$(pwd)
 
 # Get db config options from wp-config file
-file_config="$current_directory/wp-config.php"
-if [ ! -f "$file_config" ]; then
+readonly FILE_CONFIG="$CURRENT_DIRECTORY/wp-config.php"
+if [ ! -f "$FILE_CONFIG" ]; then
   printf "The wp-config.php file doesn't exists. \n"
   exit 1
 fi
-db_name=$(cat $file_config | grep DB_NAME | cut -d \' -f 4)
-db_user=$(cat $file_config | grep DB_USER | cut -d \' -f 4)
-db_password=$(cat $file_config | grep DB_PASSWORD | cut -d \' -f 4)
+readonly DB_NAME=$(cat $FILE_CONFIG | grep DB_NAME | cut -d \' -f 4)
+readonly DB_USER=$(cat $FILE_CONFIG | grep DB_USER | cut -d \' -f 4)
+readonly DB_PASSWORD=$(cat $FILE_CONFIG | grep DB_PASSWORD | cut -d \' -f 4)
 
 display_help() {
 cat << EOF
@@ -37,16 +37,16 @@ exit 0
 
 import_db() {
   printf "Importing database...\n"
-  mysqldump -u$db_user -p$db_password $db_name > "$dump_name.bkp"
-  mysql -u$db_user -p$db_password -e "drop database $db_name;"
-  mysql -u$db_user -p$db_password -e "create database $db_name;"
-  mysql -u$db_user -p$db_password $db_name < $dump_name
+  mysqldump -u$DB_USER -p$DB_PASSWORD $DB_NAME > "$DUMP_NAME.bkp"
+  mysql -u$DB_USER -p$DB_PASSWORD -e "drop database $DB_NAME;"
+  mysql -u$DB_USER -p$DB_PASSWORD -e "create database $DB_NAME;"
+  mysql -u$DB_USER -p$DB_PASSWORD $DB_NAME < $DUMP_NAME
   printf "Done.\n"
 }
 
 export_db() {
   printf "Dumping database...\n"
-  mysqldump -u$db_user -p$db_password $db_name > $dump_name
+  mysqldump -u$DB_USER -p$DB_PASSWORD $DB_NAME > $DUMP_NAME
   printf "Done.\n"
 }
 
