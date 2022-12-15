@@ -2,13 +2,15 @@
 # A simple bash script to import/export a wordpress database to current wordpress installation directory.
 # written by Alfio Salanitri <www.alfiosalanitri.it> and are licensed under MIT license. 
 
-readonly DUMP_NAME='dump.sql'
+readonly DUMP_NAME="dump.sql"
 readonly CURRENT_DIRECTORY=$(pwd)
+readonly PARENT_DIRECTORY=$(cd $CURRENT_DIRECTORY && cd .. && pwd)
+readonly DUMP_FILE="$PARENT_DIRECTORY/$DUMP_NAME"
 
 # Get db config options from wp-config file
 readonly FILE_CONFIG="$CURRENT_DIRECTORY/wp-config.php"
 if [ ! -f "$FILE_CONFIG" ]; then
-  printf "The wp-config.php file doesn't exists. \n"
+  printf "The wp-config.php file doesn't exists. Run wp-db-sync from wordpress installation directory.\n"
   exit 1
 fi
 readonly DB_NAME=$(cat $FILE_CONFIG | grep DB_NAME | cut -d \' -f 4)
@@ -36,18 +38,22 @@ exit 0
 }
 
 import_db() {
-  printf "Importing database...\n"
-  mysqldump -u$DB_USER -p$DB_PASSWORD $DB_NAME > "$DUMP_NAME.bkp"
+  printf "Importing database from [$DUMP_FILE] dump file...\n"
+  mysqldump -u$DB_USER -p$DB_PASSWORD $DB_NAME > "$DUMP_FILE.bkp"
   mysql -u$DB_USER -p$DB_PASSWORD -e "drop database $DB_NAME;"
   mysql -u$DB_USER -p$DB_PASSWORD -e "create database $DB_NAME;"
-  mysql -u$DB_USER -p$DB_PASSWORD $DB_NAME < $DUMP_NAME
-  printf "Done.\n"
+  if [ ! -f "$DUMP_FILE" ]; then
+    printf "[!] The dump file $DUMP_FILE doesn't exists. \n"
+    exit 1
+  fi
+  mysql -u$DB_USER -p$DB_PASSWORD $DB_NAME < $DUMP_FILE
+  printf "Done. Database imported.\n"
 }
 
 export_db() {
   printf "Dumping database...\n"
-  mysqldump -u$DB_USER -p$DB_PASSWORD $DB_NAME > $DUMP_NAME
-  printf "Done.\n"
+  mysqldump -u$DB_USER -p$DB_PASSWORD $DB_NAME > $DUMP_FILE
+  printf "Done. Database saved here: [$DUMP_FILE].\n"
 }
 
 if [ ! "$1" ]; then
