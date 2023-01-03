@@ -16,7 +16,9 @@ fi
 readonly DB_NAME=$(cat $FILE_CONFIG | grep DB_NAME | cut -d \' -f 4)
 readonly DB_USER=$(cat $FILE_CONFIG | grep DB_USER | cut -d \' -f 4)
 readonly DB_PASSWORD=$(cat $FILE_CONFIG | grep DB_PASSWORD | cut -d \' -f 4)
+readonly DB_HOST=$(cat $FILE_CONFIG | grep DB_HOST | cut -d \' -f 4)
 
+# Display help usage
 display_help() {
 cat << EOF
 Copyright (C) 2022 by Alfio Salanitri
@@ -39,20 +41,20 @@ exit 0
 
 import_db() {
   printf "Importing database from [$DUMP_FILE] dump file...\n"
-  mysqldump -u$DB_USER -p$DB_PASSWORD $DB_NAME > "$DUMP_FILE.bkp"
-  mysql -u$DB_USER -p$DB_PASSWORD -e "drop database $DB_NAME;"
-  mysql -u$DB_USER -p$DB_PASSWORD -e "create database $DB_NAME;"
+  mysqldump -u$DB_USER -p$DB_PASSWORD -h$DB_HOST $DB_NAME > "$DUMP_FILE.bkp"
+  mysql -u$DB_USER -p$DB_PASSWORD -h$DB_HOST -e "drop database $DB_NAME;"
+  mysql -u$DB_USER -p$DB_PASSWORD -h$DB_HOST -e "create database $DB_NAME;"
   if [ ! -f "$DUMP_FILE" ]; then
     printf "[!] The dump file $DUMP_FILE doesn't exists. \n"
     exit 1
   fi
-  mysql -u$DB_USER -p$DB_PASSWORD $DB_NAME < $DUMP_FILE
+  mysql -u$DB_USER -p$DB_PASSWORD -h$DB_HOST $DB_NAME < $DUMP_FILE
   printf "Done. Database imported.\n"
 }
 
 export_db() {
   printf "Dumping database...\n"
-  mysqldump -u$DB_USER -p$DB_PASSWORD $DB_NAME > $DUMP_FILE
+  mysqldump -u$DB_USER -p$DB_PASSWORD -h$DB_HOST $DB_NAME > $DUMP_FILE
   printf "Done. Database saved here: [$DUMP_FILE].\n"
 }
 
