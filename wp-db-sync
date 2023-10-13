@@ -98,6 +98,10 @@ if [ "no" == $(mysql_exists) ]; then
     exit 1
   fi
   container_name=$(docker ps --filter "name=mysql*" --format "{{.Names}}")
+  if [ "" == $container_name ]; then
+    echo "Sorry, but no docker mysql container found."
+    exit 1
+  fi
   mysql_command="docker exec -i $container_name mysql -u$DB_USER -p$DB_PASSWORD"
   mysqldump_command="docker exec -i $container_name mysqldump -u$DB_USER -p$DB_PASSWORD${db_dump_args}"
 fi
