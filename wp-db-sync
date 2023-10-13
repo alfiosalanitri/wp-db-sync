@@ -2,6 +2,45 @@
 # A simple bash script to import/export a wordpress database to current wordpress installation directory.
 # written by Alfio Salanitri <www.alfiosalanitri.it> and are licensed under MIT license. 
 
+## Functions
+
+# check if given package is installed 
+mysql_exists() {
+  if ! command -v mysql &> /dev/null; then
+   	echo "no"
+    exit
+  fi
+  echo "yes"
+}
+docker_exists() {
+  if ! command -v docker &> /dev/null; then
+   	echo "no"
+    exit
+  fi
+  echo "yes"
+}
+
+# Display help usage
+display_help() {
+cat << EOF
+Copyright (C) 2022 by Alfio Salanitri
+Website: https://github.com/alfiosalanitri/wp-db-sync
+
+Usage: $(basename $0) -i
+Options
+-i
+    Backup current database to dump.sql.bkp and import dump.sql file
+  
+-e
+    Export database to dump.sql file
+    
+-h, --help
+    show this help
+-------------
+EOF
+exit 0
+}
+
 readonly DUMP_NAME="dump.sql"
 readonly CURRENT_DIRECTORY=$(pwd)
 readonly PARENT_DIRECTORY=$(cd $CURRENT_DIRECTORY && cd .. && pwd)
@@ -29,51 +68,45 @@ if [ "" != "$(echo $db_host | grep ":")" ]; then
   fi
 fi
 
-# fix mariadb mysqldump Couldn't execute 'SELECT COLUMN_NAME, error
-MYSQL_SERVER=$(mysql -u$DB_USER -p$DB_PASSWORD -h${db_host}${db_port} -e "SELECT VERSION();" | grep -iF "maria")
-if [ "" != "$MYSQL_SERVER" ]; then
-  db_dump_args=" --column-statistics=0"
-fi
+mysql_command="mysql -u$DB_USER -p$DB_PASSWORD -h${db_host}${db_port}"
+mysqldump_command="mysqldump -u$DB_USER -p$DB_PASSWORD -h${db_host}${db_port}${db_dump_args}"
 
-# Display help usage
-display_help() {
-cat << EOF
-Copyright (C) 2022 by Alfio Salanitri
-Website: https://github.com/alfiosalanitri/wp-db-sync
-
-Usage: $(basename $0) -i
-Options
--i
-    Backup current database to dump.sql.bkp and import dump.sql file
-  
--e
-    Export database to dump.sql file
-    
--h, --help
-    show this help
--------------
-EOF
-exit 0
-}
 
 import_db() {
   printf "Importing database from [$DUMP_FILE] dump file...\n"
-  mysqldump -u$DB_USER -p$DB_PASSWORD -h${db_host}${db_port}${db_dump_args} $DB_NAME > "$DUMP_FILE.bkp"
-  mysql -u$DB_USER -p$DB_PASSWORD -h${db_host}${db_port} -e "drop database $DB_NAME;"
-  mysql -u$DB_USER -p$DB_PASSWORD -h${db_host}${db_port} -e "create database $DB_NAME;"
+  $mysqldump_command $DB_NAME > "$DUMP_FILE.bkp"
+  $mysql_command -e "drop database $DB_NAME;"
+  $mysql_command -e "create database $DB_NAME;"
   if [ ! -f "$DUMP_FILE" ]; then
     printf "[!] The dump file $DUMP_FILE doesn't exists. \n"
     exit 1
   fi
-  mysql -u$DB_USER -p$DB_PASSWORD -h${db_host}${db_port} $DB_NAME < $DUMP_FILE
+  $mysql_command $DB_NAME < $DUMP_FILE
   printf "Done. Database imported.\n"
 }
 
 export_db() {
   printf "Dumping database...\n"
-  mysqldump -u$DB_USER -p$DB_PASSWORD -h${db_host}${db_port}${db_dump_args} $DB_NAME > $DUMP_FILE
+  $mysqldump_command $DB_NAME > $DUMP_FILE
   printf "Done. Database saved here: [$DUMP_FILE].\n"
 }
+
+# set mysql_command
+if [ "no" == $(mysql_exists) ]; then
+  if [ "no" == $(docker_exists) ]; then
+    echo "Sorry, but mysql or docker aren't installed."
+    exit 1
+  fi
+  container_name=$(docker ps --filter "name=mysql*" --format "{{.Names}}")
+  mysql_command="docker exec -i $container_name mysql -u$DB_USER -p$DB_PASSWORD"
+  mysqldump_command="docker exec -i $container_name mysqldump -u$DB_USER -p$DB_PASSWORD${db_dump_args}"
+fi
+
+# fix mariadb mysqldump Couldn't execute 'SELECT COLUMN_NAME, error
+MYSQL_SERVER=$($mysql_command -e "SELECT VERSION();" | grep -iF "maria")
+if [ "" != "$MYSQL_SERVER" ]; then
+  db_dump_args=" --column-statistics=0"
+fi
 
 if [ ! "$1" ]; then
   display_help
